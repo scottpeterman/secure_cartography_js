@@ -1,0 +1,53 @@
+{
+  "source": {
+    "include": ["src/", "main.js"],
+    "includePattern": ".+\\.js$",
+    "exclude": ["node_modules/"]
+  },
+  "opts": {
+    "destination": "docs",
+    "recurse": true,
+    "readme": "docs-home.md",
+    "template": "node_modules/clean-jsdoc-theme",
+    "encoding": "utf8"
+  },
+  "plugins": ["plugins/markdown"],
+  "templates": {
+    "cleverLinks": true,
+    "monospaceLinks": false
+  },
+  "markdown": {
+    "idInHeadings": true
+  },
+  "theme_opts": {
+    "default_theme": "light",
+    "title": "Secure Cartography",
+    "homepageTitle": "Secure Cartography — API Reference",
+    "footer": "Secure Cartography — Network Discovery Engine",
+    "base_url": "./",
+    "search": true,
+    "codepen": false,
+    "menu": [
+      {
+        "title": "GitHub",
+        "link": "https://github.com/scottpeterman/secure_cartography",
+        "target": "_blank"
+      }
+    ],
+    "meta": [
+      {
+        "name": "author",
+        "content": "Scott Peterman"
+      },
+      {
+        "name": "description",
+        "content": "API reference for secure-cartography-js — recursive SNMP network discovery with topology mapping"
+      }
+    ],
+    "sections": [
+      "Modules",
+      "Classes",
+      "Global"
+    ]
+  }
+}

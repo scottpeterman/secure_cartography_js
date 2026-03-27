@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src https://fonts.gstatic.com; img-src 'self' data:;">
+<title>Secure Cartography</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   Design System — adapted from fibtrace
+   ═══════════════════════════════════════════════════════════════════ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-deep: #0a0e14;
+  --bg-surface: #0f1419;
+  --bg-card: #141a22;
+  --bg-hover: #1a2230;
+  --border-subtle: #1e2a3a;
+  --border-medium: #2a3a4e;
+  --text-primary: #e0e6ed;
+  --text-secondary: #8899aa;
+  --text-muted: #556677;
+  --accent-blue: #00d4ff;
+  --accent-green: #00e88f;
+  --accent-orange: #ffaa33;
+  --accent-red: #ff4466;
+  --accent-purple: #b48eff;
+  --accent-cyan: #00e5c7;
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+.header {
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+  height: 48px;
+  -webkit-app-region: drag;
+}
+.header-left { display: flex; align-items: center; gap: 20px; -webkit-app-region: no-drag; padding-left: 56px; }
+.logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px; font-weight: 700;
+  color: var(--accent-blue);
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+}
+.logo span { color: var(--text-muted); font-weight: 400; }
+
+.header-status {
+  font-size: 11px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  display: flex; align-items: center; gap: 6px;
+}
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+.status-dot.running {
+  background: var(--accent-blue);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.status-dot.complete { background: var(--accent-green); }
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,212,255,0.4); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 5px rgba(0,212,255,0); }
+}
+
+/* ── View Tabs ── */
+.view-tabs {
+  display: flex; gap: 0;
+  -webkit-app-region: no-drag;
+}
+.view-tab {
+  padding: 0 18px; height: 48px;
+  display: flex; align-items: center;
+  font-size: 12px; font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  user-select: none;
+}
+.view-tab:hover { color: var(--text-secondary); }
+.view-tab.active {
+  color: var(--accent-blue);
+  border-bottom-color: var(--accent-blue);
+}
+.view-tab .tab-icon { margin-right: 6px; font-size: 13px; }
+
+.header-right { display: flex; align-items: center; gap: 10px; -webkit-app-region: no-drag; }
+
+/* ── Buttons ── */
+.btn {
+  padding: 5px 12px; border-radius: 6px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px; cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--accent-blue); }
+.btn-primary { background: rgba(0,212,255,0.1); border-color: var(--accent-blue); color: var(--accent-blue); }
+.btn-primary:hover { background: rgba(0,212,255,0.2); }
+.btn-success { background: rgba(0,232,143,0.1); border-color: var(--accent-green); color: var(--accent-green); }
+.btn-success:hover { background: rgba(0,232,143,0.2); }
+.btn-danger { background: rgba(255,68,102,0.08); border-color: rgba(255,68,102,0.4); color: var(--accent-red); }
+.btn-danger:hover { background: rgba(255,68,102,0.15); }
+.btn-disabled { opacity: 0.3; pointer-events: none; }
+
+/* ── Views ── */
+.view { display: none; flex: 1; overflow: hidden; }
+.view.active { display: flex; }
+
+/* ── Main Layout (sidebar + content) ── */
+.main-layout { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 320px; min-width: 320px;
+  border-right: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.sidebar-section {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.sidebar-title {
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* ── Form Controls ── */
+.form-row { margin-bottom: 10px; }
+.form-row label {
+  display: block; font-size: 11px; font-weight: 500;
+  color: var(--text-secondary); margin-bottom: 3px;
+}
+.form-row-required label::after { content: ' *'; color: var(--accent-red); font-size: 9px; }
+.form-row input, .form-row select {
+  width: 100%; padding: 7px 9px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; outline: none;
+  transition: border-color 0.2s;
+}
+.form-row input:focus, .form-row select:focus { border-color: var(--accent-blue); }
+.form-row input::placeholder { color: var(--text-muted); }
+.form-row select { cursor: pointer; }
+.form-row select option { background: var(--bg-card); color: var(--text-primary); }
+.form-row select optgroup { background: var(--bg-card); color: var(--text-muted); font-style: normal; font-size: 10px; }
+.form-row-inline { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.form-check { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+.form-check input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--accent-blue); cursor: pointer; }
+.form-check label { font-size: 11px; color: var(--text-secondary); cursor: pointer; margin-bottom: 0; }
+
+.advanced-toggle {
+  font-size: 10px; color: var(--text-muted);
+  cursor: pointer; display: flex; align-items: center; gap: 4px;
+  margin-bottom: 10px; user-select: none;
+}
+.advanced-toggle:hover { color: var(--text-secondary); }
+.advanced-toggle .arrow { transition: transform 0.2s; display: inline-block; }
+.advanced-toggle .arrow.open { transform: rotate(90deg); }
+.advanced-section { display: none; }
+.advanced-section.open { display: block; }
+
+/* ── Run Area ── */
+.run-area {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: auto;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.btn-run { width: 100%; padding: 10px; font-size: 13px; font-weight: 600; border-radius: 7px; }
+.btn-topo-link {
+  width: 100%; padding: 8px; font-size: 12px; font-weight: 500;
+  border-radius: 7px; text-align: center;
+}
+
+/* ── Terminal Area ── */
+.terminal-area {
+  flex: 1; display: flex; flex-direction: column;
+  position: relative; overflow: hidden; background: var(--bg-deep);
+}
+.terminal-header {
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.terminal-label {
+  font-size: 11px; font-weight: 500;
+  color: var(--accent-blue);
+}
+.terminal-actions { display: flex; gap: 6px; }
+.terminal-container { flex: 1; padding: 6px; overflow: hidden; }
+#terminal { height: 100%; }
+
+/* ── Stat Cards ── */
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.stat {
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border-radius: 7px;
+  border: 1px solid var(--border-subtle);
+}
+.stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px; font-weight: 600; line-height: 1;
+}
+.stat-label { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+.stat-value.blue { color: var(--accent-blue); }
+.stat-value.green { color: var(--accent-green); }
+.stat-value.orange { color: var(--accent-orange); }
+.stat-value.purple { color: var(--accent-purple); }
+
+/* ── Device List ── */
+.device-item {
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border-radius: 7px;
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; gap: 8px;
+}
+.device-item:hover { border-color: var(--accent-blue); background: var(--bg-hover); }
+.device-item.active { border-color: var(--accent-blue); background: rgba(0,212,255,0.05); }
+.device-status { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.device-status.ok { background: var(--accent-green); }
+.device-status.fail { background: var(--accent-red); }
+.device-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.device-vendor {
+  font-family: 'Outfit', sans-serif;
+  font-size: 9px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* ── Node Detail Panel ── */
+.node-detail { display: none; }
+.node-detail.active { display: block; }
+.detail-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.detail-hostname { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; }
+.detail-badge {
+  padding: 2px 6px; border-radius: 3px;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 0.5px; text-transform: uppercase;
+}
+.badge-ok { background: rgba(0,232,143,0.15); color: var(--accent-green); }
+.badge-fail { background: rgba(255,68,102,0.15); color: var(--accent-red); }
+.badge-vendor { background: rgba(0,212,255,0.1); color: var(--accent-blue); }
+.detail-row {
+  display: flex; justify-content: space-between;
+  padding: 5px 0; border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+}
+.detail-key { color: var(--text-muted); }
+.detail-val {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--text-secondary); text-align: right;
+  max-width: 170px; word-break: break-all;
+}
+
+/* ── Filter Info ── */
+.filter-info {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* ── Cytoscape Canvas ── */
+.canvas-area {
+  flex: 1; position: relative; overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, rgba(0,212,255,0.02) 0%, transparent 60%), var(--bg-deep);
+}
+#cy-topology, #cy-viewer { width: 100%; height: 100%; }
+
+.canvas-controls {
+  position: absolute; bottom: 16px; right: 16px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.canvas-btn {
+  width: 32px; height: 32px; border-radius: 6px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.canvas-btn:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--accent-blue); }
+
+.canvas-legend {
+  position: absolute; bottom: 16px; left: 16px;
+  display: flex; gap: 14px; padding: 8px 14px;
+  background: rgba(15,20,25,0.9); border: 1px solid var(--border-subtle);
+  border-radius: 7px; font-size: 10px; color: var(--text-muted);
+  backdrop-filter: blur(8px);
+}
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 3px; border: 1.5px solid; }
+
+/* ── Drop Zone (Viewer) ── */
+.drop-zone {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  flex: 1; gap: 16px; transition: all 0.3s;
+}
+.drop-zone.drag-over { background: rgba(0,212,255,0.03); }
+.drop-zone.hidden { display: none; }
+.drop-icon {
+  width: 72px; height: 72px;
+  border: 2px dashed var(--border-medium);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; color: var(--text-muted);
+  transition: all 0.3s;
+}
+.drop-zone.drag-over .drop-icon { border-color: var(--accent-blue); color: var(--accent-blue); }
+.drop-text { font-size: 14px; color: var(--text-secondary); }
+.drop-sub { font-size: 12px; color: var(--text-muted); }
+.drop-sub a { color: var(--accent-blue); cursor: pointer; text-decoration: none; }
+.drop-sub a:hover { text-decoration: underline; }
+
+/* ── Modal ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); z-index: 100;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.active { display: flex; }
+.modal-box {
+  background: var(--bg-surface); border: 1px solid var(--border-medium);
+  border-radius: 10px; padding: 20px; width: 420px;
+}
+.modal-title { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+.modal-text { font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 6px; }
+
+/* ── Help Tooltips ── */
+.help-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--bg-card); border: 1px solid var(--border-medium);
+  color: var(--text-muted); font-size: 9px; font-weight: 700;
+  cursor: pointer; margin-left: 4px; flex-shrink: 0;
+  transition: all 0.2s; position: relative; user-select: none;
+  font-family: 'JetBrains Mono', monospace; line-height: 1;
+  vertical-align: middle;
+}
+.help-icon:hover { color: var(--accent-blue); border-color: var(--accent-blue); background: rgba(0,212,255,0.08); }
+.help-tip {
+  display: none; position: fixed; z-index: 9999;
+  background: var(--bg-card); border: 1px solid var(--border-medium);
+  border-radius: 7px; padding: 8px 10px; width: 260px;
+  font-size: 11px; font-weight: 400; line-height: 1.5;
+  color: var(--text-secondary); font-family: 'Outfit', sans-serif;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  pointer-events: none;
+}
+.help-tip::before { display: none; }
+.help-icon.active .help-tip { display: block; }
+.help-tip code {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  background: var(--bg-hover); padding: 1px 4px; border-radius: 3px; color: var(--accent-cyan);
+}
+
+/* ── About Modal ── */
+.about-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65); z-index: 200;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(6px);
+}
+.about-overlay.active { display: flex; }
+.about-box {
+  background: var(--bg-surface); border: 1px solid var(--border-medium);
+  border-radius: 14px; padding: 32px; width: 380px;
+  text-align: center; position: relative;
+}
+.about-icon { width: 96px; height: 96px; margin: 0 auto 16px; }
+.about-icon img, .about-icon svg { width: 100%; height: 100%; border-radius: 18px; }
+.about-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700;
+  color: var(--accent-blue); margin-bottom: 4px;
+}
+.about-subtitle { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+.about-author { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+.about-desc { font-size: 11px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; }
+.about-close {
+  padding: 6px 20px; border-radius: 6px;
+  border: 1px solid var(--border-medium); background: var(--bg-card);
+  color: var(--text-secondary); font-family: 'Outfit', sans-serif;
+  font-size: 12px; cursor: pointer; transition: all 0.2s;
+}
+.about-close:hover { border-color: var(--accent-blue); color: var(--text-primary); }
+.about-links { display: flex; justify-content: center; gap: 16px; margin-bottom: 16px; }
+.about-link { font-size: 11px; color: var(--accent-blue); text-decoration: none; }
+.about-link:hover { text-decoration: underline; }
+
+/* ── Help Button ── */
+.btn-help {
+  padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--border-subtle); background: transparent;
+  color: var(--text-muted); font-family: 'Outfit', sans-serif;
+  font-size: 11px; cursor: pointer; transition: all 0.2s;
+  -webkit-app-region: no-drag;
+}
+.btn-help:hover { color: var(--text-secondary); border-color: var(--border-medium); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
+.xterm-viewport::-webkit-scrollbar { width: 5px; }
+.xterm-viewport::-webkit-scrollbar-track { background: transparent; }
+.xterm-viewport::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     Header
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">sc-js<span>.app</span></div>
+    <div class="view-tabs">
+      <div class="view-tab active" data-view="discovery">
+        <span class="tab-icon">◉</span> Discovery
+      </div>
+      <div class="view-tab" data-view="topology">
+        <span class="tab-icon">⬡</span> Topology
+      </div>
+      <div class="view-tab" data-view="viewer">
+        <span class="tab-icon">⊞</span> Viewer
+      </div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-status">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Ready</span>
+    </div>
+    <button class="btn-help" onclick="showAbout()">About</button>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     Discovery View
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="view active" id="view-discovery">
+  <div class="main-layout">
+    <div class="sidebar" id="discovery-sidebar">
+
+      <!-- Seeds -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">Seeds</div>
+        <div class="form-row form-row-required">
+          <label>Seed IP(s) <span class="help-icon">?<span class="help-tip">Starting IPs for discovery. The engine begins SNMP crawling from these addresses and follows CDP/LLDP neighbor relationships outward. Comma-separated for multiple seeds.</span></span></label>
+          <input type="text" id="seedIps" placeholder="10.0.0.1, 10.0.0.2" spellcheck="false">
+        </div>
+      </div>
+
+      <!-- SNMP Credentials -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">SNMP Credentials</div>
+        <div class="form-row">
+          <label>Community String(s) <span class="help-icon">?<span class="help-tip">SNMPv2c community strings, comma-separated. Tried in order until one succeeds. First working credential is cached per <code>/24</code> subnet so neighbors skip credential cycling.</span></span></label>
+          <input type="text" id="community" placeholder="private, backup_comm" spellcheck="false">
+        </div>
+        <div class="advanced-toggle" onclick="toggleAdvanced('snmpv3')">
+          <span class="arrow" id="snmpv3Arrow">▸</span> SNMPv3
+        </div>
+        <div class="advanced-section" id="snmpv3Section">
+          <div class="form-row">
+            <label>v3 Username</label>
+            <input type="text" id="v3User" placeholder="snmpv3user" spellcheck="false" autocomplete="off">
+          </div>
+          <div class="form-row-inline">
+            <div class="form-row">
+              <label>Auth Password</label>
+              <input type="password" id="v3AuthPass" autocomplete="off">
+            </div>
+            <div class="form-row">
+              <label>Priv Password</label>
+              <input type="password" id="v3PrivPass" autocomplete="off">
+            </div>
+          </div>
+          <div class="form-row-inline">
+            <div class="form-row">
+              <label>Auth Protocol</label>
+              <select id="v3AuthProto">
+                <option value="sha" selected>SHA</option>
+                <option value="md5">MD5</option>
+                <option value="sha224">SHA-224</option>
+                <option value="sha256">SHA-256</option>
+                <option value="sha384">SHA-384</option>
+                <option value="sha512">SHA-512</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>Priv Protocol</label>
+              <select id="v3PrivProto">
+                <option value="aes" selected>AES</option>
+                <option value="des">DES</option>
+                <option value="aes192">AES-192</option>
+                <option value="aes256">AES-256</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Options -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">Options</div>
+        <div class="form-row-inline">
+          <div class="form-row">
+            <label>Max Depth <span class="help-icon">?<span class="help-tip">How many neighbor hops to crawl from seeds. Depth 1 = seeds only. Depth 3 = seeds + two levels of CDP/LLDP neighbors. Higher values discover more but take longer.</span></span></label>
+            <input type="number" id="maxDepth" value="3" min="1" max="20">
+          </div>
+          <div class="form-row">
+            <label>Timeout (s) <span class="help-icon">?<span class="help-tip">SNMP request timeout in seconds per device. Increase for high-latency or congested networks. Default 5s works for most LANs.</span></span></label>
+            <input type="number" id="timeout" value="5" min="1" max="60">
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Domains <span class="help-icon">?<span class="help-tip">DNS domain suffixes to strip from hostnames for cleaner display. Also used to scope crawl boundaries — only neighbors matching these domains are followed. Comma-separated.</span></span></label>
+          <input type="text" id="domains" placeholder="lab.local, corp.net" spellcheck="false">
+        </div>
+        <div class="form-row">
+          <label>Exclude Patterns <span class="help-icon">?<span class="help-tip">Hostname substrings to skip during crawl. Devices whose names match any pattern won't be queried. Useful for filtering phones, APs, printers. Comma-separated.</span></span></label>
+          <input type="text" id="excludes" placeholder="phone, ap-" spellcheck="false">
+        </div>
+    <div class="form-row form-row-required">
+          <label>Output Directory <span class="help-icon">?<span class="help-tip">Where <code>map.json</code> and per-device JSON files are written. The map file is used by the Topology view and is compatible with VelocityCMDB and map_pioneer.</span></span></label>
+          <div style="display:flex; gap:4px;">
+            <input type="text" id="outputDir" placeholder="./output" spellcheck="false" style="flex:1">
+            <button class="btn" onclick="pickOutputDir()" style="flex-shrink:0">Browse</button>
+          </div>
+        </div>
+
+        <div class="advanced-toggle" onclick="toggleAdvanced('advanced')">
+          <span class="arrow" id="advancedArrow">▸</span> Advanced
+        </div>
+        <div class="advanced-section" id="advancedSection">
+          <div class="form-row">
+            <label>Max Concurrent <span class="help-icon">?<span class="help-tip">Number of devices discovered simultaneously via parallel UDP sessions. Higher = faster crawl, but more open sockets. Default 20 is safe for most environments.</span></span></label>
+            <input type="number" id="maxConcurrent" value="20" min="1" max="100">
+          </div>
+          <div class="form-row">
+            <label>STT Proxy File <span class="help-icon">?<span class="help-tip">YAML file mapping device IPs to <code>localhost:port</code> for SNMP-over-SSH tunnel discovery. Generated by <code>stt-gen.js</code>. Requires a running STT-SNMP proxy process.</span></span></label>
+            <div style="display:flex; gap:4px;">
+              <input type="text" id="sttFile" placeholder="proxy.yaml" spellcheck="false" style="flex:1">
+              <button class="btn" onclick="pickSttFile()" style="flex-shrink:0">Browse</button>
+            </div>
+          </div>
+          <div class="form-check"><input type="checkbox" id="noDns"><label for="noDns">Disable DNS <span class="help-icon">?<span class="help-tip">Skip reverse DNS lookups for discovered IPs. Speeds up discovery when DNS is unavailable or unreliable.</span></span></label></div>
+          <div class="form-check"><input type="checkbox" id="verbose"><label for="verbose">Verbose output <span class="help-icon">?<span class="help-tip">Enable detailed SNMP debug output in the terminal — OID walks, credential attempts, and collector timing for each device.</span></span></label></div>
+        </div>
+      </div>
+
+      <!-- Run -->
+      <div class="run-area">
+        <button class="btn btn-primary btn-run" id="btnRun" onclick="startDiscovery()">Run Discovery</button>
+        <button class="btn btn-danger btn-run" id="btnStop" style="display:none" onclick="stopDiscovery()">Stop</button>
+        <button class="btn btn-success btn-topo-link" id="btnViewTopo" style="display:none"
+  onclick="viewTopologyResult()">View Topology ↗</button>
+      </div>
+    </div>
+
+    <!-- Terminal -->
+    <div class="terminal-area">
+      <div class="terminal-header">
+        <div class="terminal-label">Discovery Output</div>
+        <div class="terminal-actions">
+          <button class="btn" onclick="clearTerminal()">Clear</button>
+        </div>
+      </div>
+      <div class="terminal-container"><div id="terminal"></div></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     Topology View
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="view" id="view-topology">
+  <div class="main-layout">
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Overview</div>
+        <div class="stats" id="topoStats">
+          <div class="stat"><div class="stat-value blue" id="topoNodeCount">0</div><div class="stat-label">Devices</div></div>
+          <div class="stat"><div class="stat-value green" id="topoEdgeCount">0</div><div class="stat-label">Connections</div></div>
+          <div class="stat"><div class="stat-value orange" id="topoVendorCount">0</div><div class="stat-label">Vendors</div></div>
+          <div class="stat"><div class="stat-value purple" id="topoUndiscovered">0</div><div class="stat-label">Undiscovered</div></div>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Layout</div>
+        <select class="form-row" id="topoLayoutSelect" onchange="TopoViewer.applyLayout(this.value)" style="width:100%; padding:7px 9px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:5px; color:var(--text-primary); font-family:'JetBrains Mono',monospace; font-size:12px; cursor:pointer; outline:none;">
+          <optgroup label="Hierarchical">
+            <option value="dagre" selected>Dagre — Top → Bottom</option>
+            <option value="dagre-lr">Dagre — Left → Right</option>
+            <option value="breadthfirst">Breadthfirst Tree</option>
+          </optgroup>
+          <optgroup label="Force-Directed">
+            <option value="fcose">fCoSE — Fast Compound</option>
+            <option value="cose">CoSE — Built-in</option>
+            <option value="cola">Cola — Constraint-Based</option>
+          </optgroup>
+          <optgroup label="Radial">
+            <option value="concentric">Concentric — Degree Rings</option>
+            <option value="circle">Circle</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option value="grid">Grid</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Filters</div>
+        <div class="form-check">
+          <input type="checkbox" id="topoHideUndiscovered" checked onchange="topoToggleFilter()">
+          <label for="topoHideUndiscovered">Hide undiscovered</label>
+        </div>
+        <div class="form-check">
+          <input type="checkbox" id="topoHideLeaf" checked onchange="topoToggleFilter()">
+          <label for="topoHideLeaf">Hide leaf nodes</label>
+        </div>
+        <div id="topoFilterInfo" class="filter-info"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Export</div>
+        <div style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">
+          <button class="btn" onclick="TopoViewer && TopoViewer.exportPNG()">PNG</button>
+          <button class="btn" onclick="TopoViewer && TopoViewer.exportJSON()">JSON</button>
+          <select id="topoDrawioMode" style="padding:4px 6px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:5px; color:var(--text-secondary); font-family:'JetBrains Mono',monospace; font-size:10px; cursor:pointer; outline:none;">
+            <option value="icons">Icons</option>
+            <option value="shapes">Shapes</option>
+          </select>
+          <button class="btn" onclick="saveDrawIO('topo')">DrawIO</button>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Layout</div>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <button class="btn btn-success" onclick="saveLayout('topo')">Save Layout</button>
+          <button class="btn" onclick="clearLayout('topo')">Clear</button>
+          <span id="topoLayoutStatus" style="font-family:'JetBrains Mono',monospace; font-size:10px; margin-left:4px;"></span>
+        </div>
+      </div>
+      <div class="sidebar-section" style="flex:1; overflow-y:auto;">
+        <div class="sidebar-title">Devices</div>
+        <div id="topoDeviceList"></div>
+      </div>
+      <div class="sidebar-section node-detail" id="topoNodeDetail">
+        <div class="sidebar-title">Device Detail</div>
+        <div id="topoNodeDetailContent"></div>
+      </div>
+    </div>
+    <div class="canvas-area">
+      <div id="cy-topology"></div>
+      <div class="canvas-controls">
+        <button class="canvas-btn" onclick="TopoViewer.zoomIn()">+</button>
+        <button class="canvas-btn" onclick="TopoViewer.zoomOut()">−</button>
+        <button class="canvas-btn" onclick="TopoViewer.fitView()" style="font-size:11px">⊡</button>
+      </div>
+      <div class="canvas-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(4,159,217,0.25);border-color:#049fd9"></div>Cisco</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(45,134,89,0.25);border-color:#2D8659"></div>Arista</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(245,133,54,0.25);border-color:#F58536"></div>Juniper</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(255,107,107,0.2);border-color:#ff6b6b"></div>Undiscovered</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     Viewer View (standalone map.json loader)
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="view" id="view-viewer">
+  <div class="drop-zone" id="viewerDropZone">
+    <div class="drop-icon">⬡</div>
+    <div class="drop-text">Drop a map.json here</div>
+    <div class="drop-sub">
+      or <a onclick="openMapFile()">browse</a>
+      · Works with SC, map_pioneer, and VelocityCMDB output
+    </div>
+  </div>
+  <div class="main-layout" id="viewerMain" style="display:none">
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Overview</div>
+        <div class="stats" id="viewerStats">
+          <div class="stat"><div class="stat-value blue" id="viewerNodeCount">0</div><div class="stat-label">Devices</div></div>
+          <div class="stat"><div class="stat-value green" id="viewerEdgeCount">0</div><div class="stat-label">Connections</div></div>
+          <div class="stat"><div class="stat-value orange" id="viewerVendorCount">0</div><div class="stat-label">Vendors</div></div>
+          <div class="stat"><div class="stat-value purple" id="viewerUndiscovered">0</div><div class="stat-label">Undiscovered</div></div>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Layout</div>
+        <select class="form-row" id="viewerLayoutSelect" onchange="ViewerCy.applyLayout(this.value)" style="width:100%; padding:7px 9px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:5px; color:var(--text-primary); font-family:'JetBrains Mono',monospace; font-size:12px; cursor:pointer; outline:none;">
+          <optgroup label="Hierarchical">
+            <option value="dagre" selected>Dagre — Top → Bottom</option>
+            <option value="dagre-lr">Dagre — Left → Right</option>
+            <option value="breadthfirst">Breadthfirst Tree</option>
+          </optgroup>
+          <optgroup label="Force-Directed">
+            <option value="fcose">fCoSE — Fast Compound</option>
+            <option value="cose">CoSE — Built-in</option>
+            <option value="cola">Cola — Constraint-Based</option>
+          </optgroup>
+          <optgroup label="Radial">
+            <option value="concentric">Concentric — Degree Rings</option>
+            <option value="circle">Circle</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option value="grid">Grid</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Filters</div>
+        <div class="form-check">
+          <input type="checkbox" id="viewerHideUndiscovered" checked onchange="viewerToggleFilter()">
+          <label for="viewerHideUndiscovered">Hide undiscovered</label>
+        </div>
+        <div class="form-check">
+          <input type="checkbox" id="viewerHideLeaf" checked onchange="viewerToggleFilter()">
+          <label for="viewerHideLeaf">Hide leaf nodes</label>
+        </div>
+        <div id="viewerFilterInfo" class="filter-info"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Export</div>
+        <div style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">
+          <button class="btn" onclick="ViewerCy.exportPNG()">PNG</button>
+          <button class="btn" onclick="ViewerCy.exportJSON()">JSON</button>
+          <select id="viewerDrawioMode" style="padding:4px 6px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:5px; color:var(--text-secondary); font-family:'JetBrains Mono',monospace; font-size:10px; cursor:pointer; outline:none;">
+            <option value="icons">Icons</option>
+            <option value="shapes">Shapes</option>
+          </select>
+          <button class="btn" onclick="saveDrawIO('viewer')">DrawIO</button>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Layout</div>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <button class="btn btn-success" onclick="saveLayout('viewer')">Save Layout</button>
+          <button class="btn" onclick="clearLayout('viewer')">Clear</button>
+          <span id="viewerLayoutStatus" style="font-family:'JetBrains Mono',monospace; font-size:10px; margin-left:4px;"></span>
+        </div>
+      </div>
+      <div class="sidebar-section" style="flex:1; overflow-y:auto;">
+        <div class="sidebar-title">Devices</div>
+        <div id="viewerDeviceList"></div>
+      </div>
+      <div class="sidebar-section node-detail" id="viewerNodeDetail">
+        <div class="sidebar-title">Device Detail</div>
+        <div id="viewerNodeDetailContent"></div>
+      </div>
+      <div class="run-area">
+        <button class="btn btn-primary" style="width:100%" onclick="openMapFile()">Load Another File</button>
+      </div>
+    </div>
+    <div class="canvas-area">
+      <div id="cy-viewer"></div>
+      <div class="canvas-controls">
+        <button class="canvas-btn" onclick="ViewerCy.zoomIn()">+</button>
+        <button class="canvas-btn" onclick="ViewerCy.zoomOut()">−</button>
+        <button class="canvas-btn" onclick="ViewerCy.fitView()" style="font-size:11px">⊡</button>
+      </div>
+      <div class="canvas-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(4,159,217,0.25);border-color:#049fd9"></div>Cisco</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(45,134,89,0.25);border-color:#2D8659"></div>Arista</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(245,133,54,0.25);border-color:#F58536"></div>Juniper</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(255,107,107,0.2);border-color:#ff6b6b"></div>Undiscovered</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     About Modal
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="about-overlay" id="aboutOverlay" onclick="if(event.target===this)hideAbout()">
+  <div class="about-box">
+    <div class="about-icon">
+      <img src="./assets/logo.svg" alt="Secure Cartography JS" onerror="this.style.display='none'">
+    </div>
+    <div class="about-title">Secure Cartography JS</div>
+    <div class="about-subtitle">Recursive SNMP Network Discovery &amp; Topology Mapping</div>
+    <div class="about-author">Scott Peterman</div>
+    <div class="about-desc">
+      Point it at a seed IP, give it SNMP credentials, and it crawls CDP/LLDP neighbors
+      recursively — building a complete topology map of every device it can reach.
+      Vendor-colored visualization, four export formats.
+    </div>
+    <div class="about-links">
+      <a class="about-link" href="https://github.com/scottpeterman" target="_blank">Author</a>
+    </div>
+    <button class="about-close" onclick="hideAbout()">Close</button>
+  </div>
+</div>
+
+<script>
+/* ── About Modal ── */
+function showAbout() {
+  document.getElementById('aboutOverlay').classList.add('active');
+}
+function hideAbout() {
+  document.getElementById('aboutOverlay').classList.remove('active');
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') hideAbout();
+});
+
+/* ── Help Tooltips (fixed position to escape sidebar overflow) ── */
+document.addEventListener('click', (e) => {
+  const icon = e.target.closest('.help-icon');
+  // Close all open tips first
+  document.querySelectorAll('.help-icon.active').forEach(el => {
+    if (el !== icon) {
+      el.classList.remove('active');
+      const t = el.querySelector('.help-tip');
+      if (t) t.style.display = '';
+    }
+  });
+  if (!icon) return;
+
+  // Prevent checkbox toggle when help icon is inside a label
+  e.preventDefault();
+  e.stopPropagation();
+
+  icon.classList.toggle('active');
+  if (icon.classList.contains('active')) {
+    const tip = icon.querySelector('.help-tip');
+    if (!tip) return;
+    const rect = icon.getBoundingClientRect();
+    // Show offscreen first so we can measure height
+    tip.style.left = '-9999px';
+    tip.style.top = '0';
+    tip.style.display = 'block';
+    const tipH = tip.offsetHeight;
+    // Position centered horizontally on the icon
+    tip.style.left = Math.max(8, rect.left + rect.width / 2 - 130) + 'px';
+    // Above if room, otherwise below
+    if (rect.top > tipH + 16) {
+      tip.style.top = (rect.top - tipH - 8) + 'px';
+    } else {
+      tip.style.top = (rect.bottom + 8) + 'px';
+    }
+  } else {
+    const tip = icon.querySelector('.help-tip');
+    if (tip) tip.style.display = '';
+  }
+});
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     External Scripts
+     ═══════════════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+<script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+<script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+<script src="https://unpkg.com/layout-base@2.0.1/layout-base.js"></script>
+<script src="https://unpkg.com/cose-base@2.2.0/cose-base.js"></script>
+<script src="https://unpkg.com/cytoscape-fcose@2.2.0/cytoscape-fcose.js"></script>
+<script src="https://unpkg.com/webcola@3.4.0/WebCola/cola.min.js"></script>
+<script src="https://unpkg.com/cytoscape-cola@2.5.1/cytoscape-cola.js"></script>
+
+<script src="./drawio-export.js"></script>
+<script src="./topology.js"></script>
+<script src="./renderer.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Main gradient for the terminal body -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1e2e"/>
+      <stop offset="100%" stop-color="#0d1017"/>
+    </linearGradient>
+    <!-- Accent gradient for the prompt/cursor -->
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00e5a0"/>
+      <stop offset="100%" stop-color="#00b8d4"/>
+    </linearGradient>
+    <!-- Network node glow -->
+    <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00e5a0" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#00e5a0" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Outer border gradient -->
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5a0" stop-opacity="0.7"/>
+      <stop offset="50%" stop-color="#00b8d4" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#00e5a0" stop-opacity="0.7"/>
+    </linearGradient>
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+    <!-- Glow filter for accent elements -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Subtle glow for network lines -->
+    <filter id="lineGlow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- === BACKGROUND ROUNDED SQUARE === -->
+  <rect x="32" y="32" width="448" height="448" rx="72" ry="72" fill="url(#bgGrad)" filter="url(#shadow)"/>
+  <!-- Border highlight -->
+  <rect x="32" y="32" width="448" height="448" rx="72" ry="72" fill="none" stroke="url(#borderGrad)" stroke-width="2"/>
+
+  <!-- === TERMINAL WINDOW === -->
+  <!-- Terminal chrome bar -->
+  <rect x="72" y="80" width="368" height="28" rx="8" ry="8" fill="#232839"/>
+  <!-- Traffic light dots -->
+  <circle cx="92" cy="94" r="5.5" fill="#ff5f57"/>
+  <circle cx="110" cy="94" r="5.5" fill="#febc2e"/>
+  <circle cx="128" cy="94" r="5.5" fill="#28c840"/>
+  <!-- Terminal title -->
+  <text x="256" y="98" font-family="SF Mono, Menlo, Consolas, monospace" font-size="11" fill="#5a6078" text-anchor="middle" font-weight="500">secure-cartography-js</text>
+
+  <!-- Terminal body -->
+  <rect x="72" y="108" width="368" height="240" rx="0" ry="0" fill="#0f1219"/>
+  <!-- Bottom rounding -->
+  <rect x="72" y="320" width="368" height="28" rx="8" ry="8" fill="#0f1219"/>
+  <rect x="72" y="320" width="368" height="14" fill="#0f1219"/>
+
+  <!-- === TERMINAL CONTENT === -->
+
+  <!-- Depth header -->
+  <text x="92" y="138" font-family="SF Mono, Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#00b8d4">DEPTH 3/3: Processing 2 devices</text>
+  <!-- Separator line -->
+  <line x1="92" y1="143" x2="420" y2="143" stroke="#00b8d4" stroke-width="1" stroke-opacity="0.4"/>
+
+  <!-- Discovering -->
+  <text x="92" y="164" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12" fill="#3d4460">Discovering: 172.17.1.136</text>
+
+  <!-- OK result -->
+  <text x="92" y="182" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12">
+    <tspan fill="#42e8a0" font-weight="700">OK</tspan><tspan fill="#3d4460">: agg5-01.iad1 via snmp (3, 191ms)</tspan>
+  </text>
+
+  <!-- Discovery Complete banner -->
+  <text x="92" y="210" font-family="SF Mono, Menlo, Consolas, monospace" font-size="9" fill="#42e8a0" opacity="0.5">####################################</text>
+  <text x="92" y="226" font-family="SF Mono, Menlo, Consolas, monospace" font-size="14" font-weight="700" fill="#42e8a0">  DISCOVERY COMPLETE</text>
+  <text x="92" y="240" font-family="SF Mono, Menlo, Consolas, monospace" font-size="9" fill="#42e8a0" opacity="0.5">####################################</text>
+
+  <!-- Stats -->
+  <text x="92" y="262" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12">
+    <tspan fill="#3d4460">Successful: </tspan><tspan fill="#42e8a0">11</tspan>
+  </text>
+  <text x="92" y="280" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12">
+    <tspan fill="#3d4460">Failed:     </tspan><tspan fill="#ff5f57">1</tspan>
+  </text>
+  <text x="92" y="298" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12">
+    <tspan fill="#3d4460">Duration:   </tspan><tspan fill="#5a6078">5.9s</tspan>
+  </text>
+
+  <!-- Blinking cursor line -->
+  <text x="92" y="324" font-family="SF Mono, Menlo, Consolas, monospace" font-size="16" font-weight="700">
+    <tspan fill="#00e5a0">❯</tspan>
+  </text>
+  <!-- Cursor block -->
+  <rect x="112" y="311" width="10" height="17" fill="#00e5a0" opacity="0.85">
+    <animate attributeName="opacity" values="0.85;0;0.85" dur="1.2s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- === NETWORK TOPOLOGY ELEMENT (bottom portion) === -->
+  <!-- Network connection lines -->
+  <g filter="url(#lineGlow)" opacity="0.8">
+    <!-- Hub to spokes -->
+    <line x1="256" y1="410" x2="156" y2="430" stroke="#00e5a0" stroke-width="2" stroke-opacity="0.5"/>
+    <line x1="256" y1="410" x2="356" y2="430" stroke="#00e5a0" stroke-width="2" stroke-opacity="0.5"/>
+    <line x1="256" y1="410" x2="196" y2="450" stroke="#00b8d4" stroke-width="1.5" stroke-opacity="0.4"/>
+    <line x1="256" y1="410" x2="316" y2="450" stroke="#00b8d4" stroke-width="1.5" stroke-opacity="0.4"/>
+    <!-- Cross links -->
+    <line x1="156" y1="430" x2="196" y2="450" stroke="#00e5a0" stroke-width="1" stroke-opacity="0.3"/>
+    <line x1="356" y1="430" x2="316" y2="450" stroke="#00e5a0" stroke-width="1" stroke-opacity="0.3"/>
+  </g>
+
+  <!-- Central hub node -->
+  <circle cx="256" cy="410" r="14" fill="url(#nodeGlow)"/>
+  <circle cx="256" cy="410" r="7" fill="#00e5a0"/>
+  <circle cx="256" cy="410" r="3.5" fill="#0f1219"/>
+
+  <!-- Spoke nodes -->
+  <circle cx="156" cy="430" r="5" fill="#00b8d4"/>
+  <circle cx="156" cy="430" r="2.5" fill="#0f1219"/>
+
+  <circle cx="356" cy="430" r="5" fill="#00b8d4"/>
+  <circle cx="356" cy="430" r="2.5" fill="#0f1219"/>
+
+  <circle cx="196" cy="450" r="4" fill="#00b8d4" opacity="0.7"/>
+  <circle cx="196" cy="450" r="2" fill="#0f1219"/>
+
+  <circle cx="316" cy="450" r="4" fill="#00b8d4" opacity="0.7"/>
+  <circle cx="316" cy="450" r="2" fill="#0f1219"/>
+
+  <!-- === DATA FLOW PARTICLES on network lines === -->
+  <circle r="2" fill="#00e5a0" opacity="0.9">
+    <animateMotion dur="2s" repeatCount="indefinite" path="M256,410 L156,430"/>
+  </circle>
+  <circle r="2" fill="#00e5a0" opacity="0.9">
+    <animateMotion dur="2.4s" repeatCount="indefinite" path="M256,410 L356,430"/>
+  </circle>
+  <circle r="1.5" fill="#00b8d4" opacity="0.7">
+    <animateMotion dur="3s" repeatCount="indefinite" path="M256,410 L316,450"/>
+  </circle>
+</svg>

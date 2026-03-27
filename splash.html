@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 580px;
+      height: 380px;
+      overflow: hidden;
+      background: #0a0e17;
+      font-family: 'Segoe UI', 'SF Pro Display', system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+
+    .splash {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── Outer border glow ── */
+    .border-frame {
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(0, 243, 199, 0.15);
+      border-radius: 8px;
+      pointer-events: none;
+    }
+    .border-frame::after {
+      content: '';
+      position: absolute;
+      inset: 3px;
+      border: 1px solid rgba(0, 243, 199, 0.06);
+      border-radius: 6px;
+    }
+
+    /* ── Scan line effect ── */
+    .scanlines {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 243, 199, 0.008) 2px,
+        rgba(0, 243, 199, 0.008) 4px
+      );
+      pointer-events: none;
+      border-radius: 8px;
+    }
+
+    /* ── SVG canvas ── */
+    .network-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Connection lines ── */
+    .link {
+      stroke: rgba(0, 243, 199, 0.25);
+      stroke-width: 1;
+      fill: none;
+      stroke-dasharray: 200;
+      stroke-dashoffset: 200;
+    }
+    .link.active {
+      animation: drawLine 0.6s ease-out forwards;
+    }
+    .link.active.pulse {
+      animation: drawLine 0.6s ease-out forwards, linkPulse 2s ease-in-out 0.6s infinite;
+    }
+
+    @keyframes drawLine {
+      to { stroke-dashoffset: 0; }
+    }
+    @keyframes linkPulse {
+      0%, 100% { stroke: rgba(0, 243, 199, 0.2); }
+      50% { stroke: rgba(0, 243, 199, 0.45); }
+    }
+
+    /* ── Data packets traveling along links ── */
+    .packet {
+      fill: #00f3c7;
+      opacity: 0;
+    }
+    .packet.active {
+      opacity: 1;
+      animation: packetFade 1.8s ease-in-out infinite;
+    }
+    @keyframes packetFade {
+      0%, 100% { opacity: 0; r: 1; }
+      30%, 70% { opacity: 0.8; r: 1.5; }
+    }
+
+    /* ── Nodes ── */
+    .node-ring {
+      fill: none;
+      stroke: rgba(0, 243, 199, 0.3);
+      stroke-width: 1;
+      opacity: 0;
+      transform-origin: center;
+      transform: scale(0);
+    }
+    .node-ring.active {
+      animation: nodeAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    @keyframes nodeAppear {
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .node-core {
+      fill: #00f3c7;
+      opacity: 0;
+      transform-origin: center;
+      transform: scale(0);
+    }
+    .node-core.active {
+      animation: coreAppear 0.3s ease-out forwards;
+    }
+    @keyframes coreAppear {
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .node-glow {
+      fill: none;
+      opacity: 0;
+    }
+    .node-glow.active {
+      animation: glowPulse 3s ease-in-out infinite;
+    }
+    @keyframes glowPulse {
+      0%, 100% { opacity: 0.15; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── Seed node (center) special treatment ── */
+    .seed-ping {
+      fill: none;
+      stroke: #00f3c7;
+      stroke-width: 1;
+      opacity: 0;
+    }
+    .seed-ping.active {
+      animation: seedPing 2s ease-out infinite;
+    }
+    @keyframes seedPing {
+      0% { opacity: 0.6; r: 4; stroke-width: 1.5; }
+      100% { opacity: 0; r: 28; stroke-width: 0.3; }
+    }
+
+    /* ── Branding ── */
+    .brand {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      margin-top: 60px;
+    }
+    .brand-title {
+      font-size: 26px;
+      font-weight: 300;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: #e0e8f0;
+      opacity: 0;
+      animation: fadeUp 0.8s ease-out 1.6s forwards;
+    }
+    .brand-title span {
+      color: #00f3c7;
+      font-weight: 400;
+    }
+    .brand-sub {
+      font-size: 10px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: rgba(0, 243, 199, 0.5);
+      margin-top: 8px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease-out 2.0s forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Loading bar ── */
+    .loader {
+      position: absolute;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 180px;
+      height: 1px;
+      background: rgba(0, 243, 199, 0.1);
+      border-radius: 1px;
+      overflow: hidden;
+      opacity: 0;
+      animation: fadeIn 0.4s ease-out 2.4s forwards;
+    }
+    .loader-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, transparent, #00f3c7, transparent);
+      border-radius: 1px;
+      animation: load 2.8s ease-in-out 2.4s forwards;
+    }
+    @keyframes load {
+      0% { width: 0%; }
+      20% { width: 25%; }
+      50% { width: 55%; }
+      80% { width: 85%; }
+      100% { width: 100%; }
+    }
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    .loader-label {
+      position: absolute;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(0, 243, 199, 0.35);
+      opacity: 0;
+      animation: fadeIn 0.4s ease-out 2.4s forwards;
+      white-space: nowrap;
+    }
+
+    /* ── Version ── */
+    .version {
+      position: absolute;
+      bottom: 10px;
+      right: 16px;
+      font-size: 9px;
+      color: rgba(0, 243, 199, 0.2);
+      letter-spacing: 1px;
+      opacity: 0;
+      animation: fadeIn 0.4s ease-out 2.6s forwards;
+    }
+
+    /* ── Corner accents ── */
+    .corner {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      opacity: 0;
+      animation: fadeIn 0.3s ease-out 0.3s forwards;
+    }
+    .corner svg { width: 100%; height: 100%; }
+    .corner-tl { top: 6px; left: 6px; }
+    .corner-tr { top: 6px; right: 6px; transform: scaleX(-1); }
+    .corner-bl { bottom: 6px; left: 6px; transform: scaleY(-1); }
+    .corner-br { bottom: 6px; right: 6px; transform: scale(-1, -1); }
+  </style>
+</head>
+<body>
+  <div class="splash">
+    <div class="border-frame"></div>
+    <div class="scanlines"></div>
+
+    <!-- Corner accents -->
+    <div class="corner corner-tl"><svg viewBox="0 0 20 20"><path d="M0 12 L0 0 L12 0" stroke="rgba(0,243,199,0.3)" fill="none" stroke-width="1"/></svg></div>
+    <div class="corner corner-tr"><svg viewBox="0 0 20 20"><path d="M0 12 L0 0 L12 0" stroke="rgba(0,243,199,0.3)" fill="none" stroke-width="1"/></svg></div>
+    <div class="corner corner-bl"><svg viewBox="0 0 20 20"><path d="M0 12 L0 0 L12 0" stroke="rgba(0,243,199,0.3)" fill="none" stroke-width="1"/></svg></div>
+    <div class="corner corner-br"><svg viewBox="0 0 20 20"><path d="M0 12 L0 0 L12 0" stroke="rgba(0,243,199,0.3)" fill="none" stroke-width="1"/></svg></div>
+
+    <!-- Network topology SVG -->
+    <svg class="network-svg" viewBox="0 0 580 380" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="glow-cyan">
+          <stop offset="0%" stop-color="#00f3c7" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#00f3c7" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="glow-green">
+          <stop offset="0%" stop-color="#39e75f" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#39e75f" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="glow-amber">
+          <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.4"/>
+          <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+
+      <!-- ── Links (drawn between node centers) ── -->
+      <g id="links">
+        <!-- Seed to tier 1 -->
+        <line class="link" id="l0" x1="290" y1="120" x2="160" y2="80"/>
+        <line class="link" id="l1" x1="290" y1="120" x2="420" y2="80"/>
+        <line class="link" id="l2" x1="290" y1="120" x2="170" y2="170"/>
+        <line class="link" id="l3" x1="290" y1="120" x2="410" y2="170"/>
+        <!-- Tier 1 to tier 2 -->
+        <line class="link" id="l4" x1="160" y1="80" x2="80" y2="50"/>
+        <line class="link" id="l5" x1="160" y1="80" x2="100" y2="120"/>
+        <line class="link" id="l6" x1="420" y1="80" x2="500" y2="50"/>
+        <line class="link" id="l7" x1="420" y1="80" x2="480" y2="120"/>
+        <line class="link" id="l8" x1="170" y1="170" x2="90" y2="200"/>
+        <line class="link" id="l9" x1="410" y1="170" x2="490" y2="200"/>
+        <!-- Cross-links -->
+        <line class="link" id="l10" x1="160" y1="80" x2="420" y2="80"/>
+        <line class="link" id="l11" x1="170" y1="170" x2="410" y2="170"/>
+      </g>
+
+      <!-- ── Animated packets ── -->
+      <g id="packets">
+        <circle class="packet" id="p0" r="1.5">
+          <animateMotion dur="2.5s" repeatCount="indefinite" path="M290,120 L160,80" begin="2s"/>
+        </circle>
+        <circle class="packet" id="p1" r="1.5">
+          <animateMotion dur="2.8s" repeatCount="indefinite" path="M290,120 L420,80" begin="2.3s"/>
+        </circle>
+        <circle class="packet" id="p2" r="1.5">
+          <animateMotion dur="3.1s" repeatCount="indefinite" path="M160,80 L80,50" begin="2.6s"/>
+        </circle>
+        <circle class="packet" id="p3" r="1.5">
+          <animateMotion dur="2.2s" repeatCount="indefinite" path="M420,80 L500,50" begin="2.1s"/>
+        </circle>
+        <circle class="packet" id="p4" r="1.5">
+          <animateMotion dur="3.5s" repeatCount="indefinite" path="M160,80 L420,80" begin="2.8s"/>
+        </circle>
+        <circle class="packet" id="p5" r="1.5">
+          <animateMotion dur="2.6s" repeatCount="indefinite" path="M170,170 L410,170" begin="3s"/>
+        </circle>
+      </g>
+
+      <!-- ── Nodes ── -->
+      <g id="nodes">
+        <!-- Seed node (center) — cyan -->
+        <circle class="node-glow" id="ng-seed" cx="290" cy="120" r="20" fill="url(#glow-cyan)"/>
+        <circle class="seed-ping" id="sp-seed" cx="290" cy="120" r="4"/>
+        <circle class="node-ring" id="nr-seed" cx="290" cy="120" r="6" stroke="#00f3c7" stroke-width="1.5"/>
+        <circle class="node-core" id="nc-seed" cx="290" cy="120" r="2.5" fill="#00f3c7"/>
+
+        <!-- Tier 1 — green (Arista-colored, like the app) -->
+        <circle class="node-glow" id="ng-t1a" cx="160" cy="80" r="16" fill="url(#glow-green)"/>
+        <circle class="node-ring" id="nr-t1a" cx="160" cy="80" r="5" stroke="#39e75f"/>
+        <circle class="node-core" id="nc-t1a" cx="160" cy="80" r="2" fill="#39e75f"/>
+
+        <circle class="node-glow" id="ng-t1b" cx="420" cy="80" r="16" fill="url(#glow-green)"/>
+        <circle class="node-ring" id="nr-t1b" cx="420" cy="80" r="5" stroke="#39e75f"/>
+        <circle class="node-core" id="nc-t1b" cx="420" cy="80" r="2" fill="#39e75f"/>
+
+        <circle class="node-glow" id="ng-t1c" cx="170" cy="170" r="16" fill="url(#glow-cyan)"/>
+        <circle class="node-ring" id="nr-t1c" cx="170" cy="170" r="5" stroke="#00f3c7"/>
+        <circle class="node-core" id="nc-t1c" cx="170" cy="170" r="2" fill="#00f3c7"/>
+
+        <circle class="node-glow" id="ng-t1d" cx="410" cy="170" r="16" fill="url(#glow-cyan)"/>
+        <circle class="node-ring" id="nr-t1d" cx="410" cy="170" r="5" stroke="#00f3c7"/>
+        <circle class="node-core" id="nc-t1d" cx="410" cy="170" r="2" fill="#00f3c7"/>
+
+        <!-- Tier 2 — smaller, amber/orange (Juniper feel) -->
+        <circle class="node-glow" id="ng-t2a" cx="80" cy="50" r="12" fill="url(#glow-amber)"/>
+        <circle class="node-ring" id="nr-t2a" cx="80" cy="50" r="3.5" stroke="#f59e0b" stroke-width="0.8"/>
+        <circle class="node-core" id="nc-t2a" cx="80" cy="50" r="1.5" fill="#f59e0b"/>
+
+        <circle class="node-glow" id="ng-t2b" cx="100" cy="120" r="12" fill="url(#glow-amber)"/>
+        <circle class="node-ring" id="nr-t2b" cx="100" cy="120" r="3.5" stroke="#f59e0b" stroke-width="0.8"/>
+        <circle class="node-core" id="nc-t2b" cx="100" cy="120" r="1.5" fill="#f59e0b"/>
+
+        <circle class="node-glow" id="ng-t2c" cx="500" cy="50" r="12" fill="url(#glow-green)"/>
+        <circle class="node-ring" id="nr-t2c" cx="500" cy="50" r="3.5" stroke="#39e75f" stroke-width="0.8"/>
+        <circle class="node-core" id="nc-t2c" cx="500" cy="50" r="1.5" fill="#39e75f"/>
+
+        <circle class="node-glow" id="ng-t2d" cx="480" cy="120" r="12" fill="url(#glow-green)"/>
+        <circle class="node-ring" id="nr-t2d" cx="480" cy="120" r="3.5" stroke="#39e75f" stroke-width="0.8"/>
+        <circle class="node-core" id="nc-t2d" cx="480" cy="120" r="1.5" fill="#39e75f"/>
+
+        <circle class="node-glow" id="ng-t2e" cx="90" cy="200" r="12" fill="url(#glow-cyan)"/>
+        <circle class="node-ring" id="nr-t2e" cx="90" cy="200" r="3.5" stroke="#00f3c7" stroke-width="0.8"/>
+        <circle class="node-core" id="nc-t2e" cx="90" cy="200" r="1.5" fill="#00f3c7"/>
+
+        <circle class="node-glow" id="ng-t2f" cx="490" cy="200" r="12" fill="url(#glow-cyan)"/>
+        <circle class="node-ring" id="nr-t2f" cx="490" cy="200" r="3.5" stroke="#00f3c7" stroke-width="0.8"/>
+        <circle class="node-core" id="nc-t2f" cx="490" cy="200" r="1.5" fill="#00f3c7"/>
+      </g>
+    </svg>
+
+    <!-- Branding -->
+    <div class="brand">
+      <div class="brand-title"><span>Secure</span> Cartography</div>
+      <div class="brand-sub">Network Discovery Engine</div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loader-label">Initializing</div>
+    <div class="loader"><div class="loader-bar"></div></div>
+    <div class="version">v0.1.0</div>
+  </div>
+
+  <script>
+    // Orchestrated reveal — simulates a discovery crawl
+    // Seed appears first, then tier-1 neighbors, then tier-2, then cross-links
+
+    const timeline = [
+      // [delay_ms, element_ids[], class_to_add]
+      // Seed node appears
+      [300,  ['nc-seed', 'nr-seed'], 'active'],
+      [400,  ['ng-seed'], 'active'],
+      [500,  ['sp-seed'], 'active'],
+
+      // Links from seed to tier 1 draw
+      [700,  ['l0'], 'active'],
+      [800,  ['l1'], 'active'],
+      [900,  ['l2'], 'active'],
+      [1000, ['l3'], 'active'],
+
+      // Tier 1 nodes appear
+      [900,  ['nc-t1a', 'nr-t1a'], 'active'],
+      [950,  ['ng-t1a'], 'active'],
+      [1000, ['nc-t1b', 'nr-t1b'], 'active'],
+      [1050, ['ng-t1b'], 'active'],
+      [1100, ['nc-t1c', 'nr-t1c'], 'active'],
+      [1150, ['ng-t1c'], 'active'],
+      [1200, ['nc-t1d', 'nr-t1d'], 'active'],
+      [1250, ['ng-t1d'], 'active'],
+
+      // Links from tier 1 to tier 2
+      [1300, ['l4'], 'active'],
+      [1350, ['l5'], 'active'],
+      [1400, ['l6'], 'active'],
+      [1450, ['l7'], 'active'],
+      [1500, ['l8'], 'active'],
+      [1550, ['l9'], 'active'],
+
+      // Tier 2 nodes appear
+      [1500, ['nc-t2a', 'nr-t2a'], 'active'],
+      [1520, ['ng-t2a'], 'active'],
+      [1550, ['nc-t2b', 'nr-t2b'], 'active'],
+      [1570, ['ng-t2b'], 'active'],
+      [1600, ['nc-t2c', 'nr-t2c'], 'active'],
+      [1620, ['ng-t2c'], 'active'],
+      [1650, ['nc-t2d', 'nr-t2d'], 'active'],
+      [1670, ['ng-t2d'], 'active'],
+      [1700, ['nc-t2e', 'nr-t2e'], 'active'],
+      [1720, ['ng-t2e'], 'active'],
+      [1750, ['nc-t2f', 'nr-t2f'], 'active'],
+      [1770, ['ng-t2f'], 'active'],
+
+      // Cross-links last (discovery validation)
+      [1900, ['l10', 'l11'], 'active'],
+
+      // Enable pulse on all links + packets
+      [2200, ['l0','l1','l2','l3','l4','l5','l6','l7','l8','l9','l10','l11'], 'pulse'],
+      [2200, ['p0','p1','p2','p3','p4','p5'], 'active'],
+    ];
+
+    for (const [delay, ids, cls] of timeline) {
+      setTimeout(() => {
+        for (const id of ids) {
+          const el = document.getElementById(id);
+          if (el) el.classList.add(cls);
+        }
+      }, delay);
+    }
+  </script>
+</body>
+</html>

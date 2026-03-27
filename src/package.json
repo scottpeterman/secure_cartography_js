@@ -1,0 +1,24 @@
+{
+  "name": "secure-cartography-js",
+  "version": "0.2.0",
+  "description": "Network discovery crawler for Node.js — recursive SNMP neighbor walk with topology mapping",
+  "main": "main.js",
+  "bin": {
+    "sc-js": "./src/sc-js.js"
+  },
+  "scripts": {
+    "test:snmp": "node test_client.js",
+    "sc": "node src/sc-js.js",
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "net-snmp": "^3.11.2"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
+  "keywords": ["snmp", "network", "discovery", "topology", "cdp", "lldp", "crawler"],
+  "license": "MIT"
+}

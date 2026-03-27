@@ -1,0 +1,67 @@
+{
+  "name": "sc-js-electron",
+  "version": "0.1.0",
+  "description": "Secure Cartography JS — Electron GUI for network discovery and topology mapping",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "sc": "node src/sc-js.js",
+    "build": "electron-builder",
+    "build:linux": "electron-builder --linux",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+      "docs": "jsdoc -c jsdoc.json"
+
+  },
+  "build": {
+    "appId": "com.scottpeterman.sc-js",
+    "productName": "Secure Cartography JS",
+    "icon": "assets/icon",
+    "files": [
+      "*.js",
+      "*.html",
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "icon": "assets/icon.iconset"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "assets/icon.icns"
+    }
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "net-snmp": "^3.11.2"
+  },
+  "devDependencies": {
+    "clean-jsdoc-theme": "^4.3.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "jsdoc": "^4.0.5"
+  },
+  "keywords": [
+    "snmp",
+    "network",
+    "discovery",
+    "topology",
+    "electron"
+  ],
+  "license": "MIT"
+}
