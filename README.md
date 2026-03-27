@@ -1,11 +1,39 @@
 # secure-cartography-js
 
-SNMP network discovery with topology mapping and visualization. Electron desktop app and Node.js CLI. Maps Exportable to drawio and png
+Recursive SNMP network discovery with topology mapping. Electron desktop app and Node.js CLI.
 
 Point it at a seed IP, give it SNMP credentials, and it crawls CDP/LLDP neighbors recursively — building a complete topology map of every device it can reach. Vendor-colored visualization, multi-format export, layout persistence, and works across Cisco, Arista, Juniper. Leaf node detection can be anything via LLDP.
 
 
 ![Discovery Demo](screenshots/slides1.gif)
+
+## Installation
+
+### Desktop App (recommended)
+
+Download the latest release for your platform:
+
+| Platform | Download |
+|----------|----------|
+| **Linux** | [Secure Cartography-0.1.0.AppImage](https://github.com/scottpeterman/secure_cartography_js/releases/download/v0.1.0/Secure.Cartography-0.1.0.AppImage) |
+| **macOS** (Apple Silicon) | [Secure Cartography JS-0.1.0-arm64.dmg](https://github.com/scottpeterman/secure_cartography_js/releases/download/v0.1.0/Secure.Cartography.JS-0.1.0-arm64.dmg) |
+| **Windows** | [Secure Cartography JS Setup 0.1.0.exe](https://github.com/scottpeterman/secure_cartography_js/releases/download/v0.1.0/Secure.Cartography.JS.Setup.0.1.0.exe) |
+
+Linux: `chmod +x` the AppImage and run it. macOS: open the .dmg and drag to Applications. Windows: run the installer.
+
+### From Source (desktop + CLI)
+
+```bash
+git clone https://github.com/scottpeterman/secure_cartography_js.git
+cd secure_cartography_js
+npm install
+
+# Launch the desktop app
+npm start
+
+# Or use the CLI directly
+npm run sc -- crawl 10.0.0.1 -c community -o ./output
+```
 
 ## What It Does
 
