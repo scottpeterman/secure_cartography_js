@@ -10,9 +10,9 @@
     "build": "electron-builder",
     "build:linux": "electron-builder --linux",
     "build:win": "electron-builder --win",
+    "build:win:appx": "electron-builder --win appx",
     "build:mac": "electron-builder --mac",
-      "docs": "jsdoc -c jsdoc.json"
-
+    "docs": "jsdoc -c jsdoc.json"
   },
   "build": {
     "appId": "com.scottpeterman.sc-js",
@@ -38,6 +38,14 @@
         "portable"
       ],
       "icon": "assets/icon.ico"
+    },
+    "appx": {
+      "identityName": "ScottPeterman.SecureCartographyJS",
+      "publisher": "CN=809ED846-AF38-4733-B6BE-7C01BFBDA244",
+      "publisherDisplayName": "Scott Peterman",
+      "displayName": "Secure Cartography JS",
+      "applicationId": "SecureCartographyJS",
+      "languages": ["en-US"]
     },
     "mac": {
       "target": [
