@@ -4,6 +4,8 @@ Recursive SNMP network discovery with topology mapping. Electron desktop app and
 
 Point it at a seed IP, give it SNMP credentials, and it crawls CDP/LLDP neighbors recursively — building a complete topology map of every device it can reach. Vendor-colored visualization, multi-format export, layout persistence, and works across Cisco, Arista, Juniper. Leaf node detection can be anything via LLDP.
 
+If you are looking for you even more features, or working with more varied authentication issues for your SNMP environment, You might also consider the Python version of Secure Cartography https://github.com/scottpeterman/secure_cartography
+
 
 ![Discovery Demo](screenshots/slides1.gif)
 
